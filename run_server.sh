@@ -2,7 +2,7 @@
 
 # Configuración
 MODEL_NAME="google_gemma-4-E2B-it-Q4_K_M.gguf"
-PORT="8080"
+PORT="8085"
 export LLM_PORT="$PORT"
 CONTEXT_SIZE="8192"
 GPU_LAYERS="0" # Por defecto 0 (CPU) en VPS. Ajustar a 42 o similar si dispones de GPU compatible con CUDA.

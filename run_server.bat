@@ -3,7 +3,8 @@ SETLOCAL EnableDelayedExpansion
 
 :: Configuración
 SET "MODEL_NAME=google_gemma-4-E2B-it-Q4_K_M.gguf"
-SET "PORT=8080"
+SET "PORT=8085"
+SET "LLM_PORT=%PORT%"
 SET "CONTEXT_SIZE=8192"
 SET "GPU_LAYERS=42"
 SET "THREADS=8"
