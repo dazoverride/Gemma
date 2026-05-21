@@ -73,6 +73,21 @@ else
     fi
 fi
 
+# Verificar dependencias de Python
+if ! command -v python3 &> /dev/null; then
+    echo "Instalando python3..."
+    if command -v apt-get &> /dev/null; then
+        if [ "$EUID" -ne 0 ]; then
+            sudo apt-get update && sudo apt-get install -y python3
+        else
+            apt-get update && apt-get install -y python3
+        fi
+    else
+        echo "ERROR: python3 no está instalado. Por favor instálalo manualmente."
+        exit 1
+    fi
+fi
+
 MODEL_PATH="./models/$MODEL_NAME"
 
 # Verificar que el modelo existe
@@ -82,5 +97,32 @@ if [ ! -f "$MODEL_PATH" ]; then
     exit 1
 fi
 
-echo "Ejecutando: $LLAMA_BIN"
-exec "$LLAMA_BIN" -m "$MODEL_PATH" -c "$CONTEXT_SIZE" --port "$PORT" -ngl "$GPU_LAYERS" -t "$THREADS" --host 127.0.0.1
+# Iniciar llama-server en segundo plano
+echo "Ejecutando Servidor de IA: $LLAMA_BIN"
+"$LLAMA_BIN" -m "$MODEL_PATH" -c "$CONTEXT_SIZE" --port "$PORT" -ngl "$GPU_LAYERS" -t "$THREADS" --host 127.0.0.1 > llama.log 2>&1 &
+LLAMA_PID=$!
+
+# Control de salida limpia con Ctrl+C (SIGINT/SIGTERM)
+cleanup() {
+    echo ""
+    echo "Deteniendo servidores..."
+    if [ ! -z "$LLAMA_PID" ]; then
+        kill "$LLAMA_PID" 2>/dev/null
+    fi
+    exit 0
+}
+trap cleanup SIGINT SIGTERM
+
+echo "Servidor de IA iniciado en segundo plano (PID: $LLAMA_PID). Logs en llama.log"
+echo ""
+
+# Iniciar servidor web de Python en primer plano
+echo "Iniciando Servidor Web del Asistente (puerto 5000)..."
+if [ -f "src/web_server.py" ]; then
+    python3 src/web_server.py
+else
+    echo "ERROR: No se encontró 'src/web_server.py'."
+    kill "$LLAMA_PID" 2>/dev/null
+    exit 1
+fi
+
