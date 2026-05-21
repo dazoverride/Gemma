@@ -32,17 +32,17 @@ else
     echo ""
 
     # 1. Comprobar herramientas de compilación
-    if ! command -v git &> /dev/null || ! command -v make &> /dev/null || ! command -v g++ &> /dev/null; then
-        echo "Instalando dependencias de compilación (git, build-essential)..."
+    if ! command -v git &> /dev/null || ! command -v cmake &> /dev/null || ! command -v g++ &> /dev/null || ! command -v make &> /dev/null; then
+        echo "Instalando dependencias de compilación (git, build-essential, cmake)..."
         if command -v apt-get &> /dev/null; then
             if [ "$EUID" -ne 0 ]; then
                 echo "Se requiere sudo para instalar dependencias de sistema."
-                sudo apt-get update && sudo apt-get install -y build-essential git
+                sudo apt-get update && sudo apt-get install -y build-essential git cmake
             else
-                apt-get update && apt-get install -y build-essential git
+                apt-get update && apt-get install -y build-essential git cmake
             fi
         else
-            echo "ERROR: No se encontró apt-get. Por favor, instala git, make y g++ manualmente en tu sistema."
+            echo "ERROR: No se encontró apt-get. Por favor, instala git, cmake y g++ manualmente en tu sistema."
             exit 1
         fi
     fi
@@ -56,11 +56,17 @@ else
         exit 1
     fi
 
-    echo "Compilando llama.cpp (esto puede tomar unos minutos)..."
+    echo "Configurando y compilando llama.cpp con CMake (esto puede tomar unos minutos)..."
     cd bin/llama.cpp-src || exit 1
-    make -j"$THREADS"
-    if [ -f "./llama-server" ]; then
-        cp llama-server ../llama-server
+    cmake -B build -DCMAKE_BUILD_TYPE=Release
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Falló la configuración de CMake."
+        cd ../..
+        exit 1
+    fi
+    cmake --build build --config Release -j"$THREADS"
+    if [ -f "./build/bin/llama-server" ]; then
+        cp ./build/bin/llama-server ../llama-server
         cd ../..
         echo "Limpiando archivos temporales de compilación..."
         rm -rf bin/llama.cpp-src
