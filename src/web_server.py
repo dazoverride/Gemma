@@ -307,7 +307,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json_response({"error": f"Error al leer cuerpo de petición: {str(e)}"}, 400)
             return
 
-        llm_url = 'http://127.0.0.1:8080/v1/chat/completions'
+        llm_port = os.environ.get('LLM_PORT', '8080')
+        llm_url = f'http://127.0.0.1:{llm_port}/v1/chat/completions'
         
         req = urllib.request.Request(
             llm_url,
