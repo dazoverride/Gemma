@@ -58,7 +58,7 @@ else
 
     echo "Configurando y compilando llama.cpp con CMake (esto puede tomar unos minutos)..."
     cd bin/llama.cpp-src || exit 1
-    cmake -B build -DCMAKE_BUILD_TYPE=Release
+    cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
     if [ $? -ne 0 ]; then
         echo "ERROR: Falló la configuración de CMake."
         cd ../..
@@ -67,6 +67,8 @@ else
     cmake --build build --config Release -j"$THREADS"
     if [ -f "./build/bin/llama-server" ]; then
         cp ./build/bin/llama-server ../llama-server
+        # Copiar cualquier librería compartida que se haya podido generar
+        find build/ -name "*.so*" -exec cp -d {} ../ \; 2>/dev/null
         cd ../..
         echo "Limpiando archivos temporales de compilación..."
         rm -rf bin/llama.cpp-src
@@ -105,7 +107,7 @@ fi
 
 # Iniciar llama-server en segundo plano
 echo "Ejecutando Servidor de IA: $LLAMA_BIN"
-"$LLAMA_BIN" -m "$MODEL_PATH" -c "$CONTEXT_SIZE" --port "$PORT" -ngl "$GPU_LAYERS" -t "$THREADS" --host 127.0.0.1 > llama.log 2>&1 &
+LD_LIBRARY_PATH="./bin:$LD_LIBRARY_PATH" "$LLAMA_BIN" -m "$MODEL_PATH" -c "$CONTEXT_SIZE" --port "$PORT" -ngl "$GPU_LAYERS" -t "$THREADS" --host 127.0.0.1 > llama.log 2>&1 &
 LLAMA_PID=$!
 
 # Control de salida limpia con Ctrl+C (SIGINT/SIGTERM)
