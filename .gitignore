@@ -1,0 +1,18 @@
+# Modelos pesados de IA (GGUF)
+/models/
+
+# Binarios de inferencia (llama.cpp)
+/bin/
+
+# Archivos de registro y caché de Python
+*.log
+__pycache__/
+*.pyc
+
+# Variables de entorno locales
+.env
+.env.local
+
+# Bases de datos locales
+/db/
+*.db
