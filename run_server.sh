@@ -27,15 +27,50 @@ elif [ -f "./llama-server" ]; then
 elif [ -f "../llama.cpp/llama-server" ]; then
     LLAMA_BIN="../llama.cpp/llama-server"
 else
-    echo "ERROR: No se encontró el binario 'llama-server' en el sistema."
-    echo "Por favor, instala llama.cpp, compílalo o coloca el binario 'llama-server' en './bin/' o en la raíz."
+    echo "ADVERTENCIA: No se encontró 'llama-server' preinstalado."
+    echo "Iniciando descarga y compilación automática de llama.cpp..."
     echo ""
-    echo "Instrucciones rápidas para compilarlo en tu VPS Linux (Ubuntu/Debian):"
-    echo "  sudo apt update && sudo apt install build-essential git -y"
-    echo "  git clone https://github.com/ggerganov/llama.cpp"
-    echo "  cd llama.cpp && make -j"
-    echo "  cp llama-server /ruta/a/tu/proyecto/bin/"
-    exit 1
+
+    # 1. Comprobar herramientas de compilación
+    if ! command -v git &> /dev/null || ! command -v make &> /dev/null || ! command -v g++ &> /dev/null; then
+        echo "Instalando dependencias de compilación (git, build-essential)..."
+        if command -v apt-get &> /dev/null; then
+            if [ "$EUID" -ne 0 ]; then
+                echo "Se requiere sudo para instalar dependencias de sistema."
+                sudo apt-get update && sudo apt-get install -y build-essential git
+            else
+                apt-get update && apt-get install -y build-essential git
+            fi
+        else
+            echo "ERROR: No se encontró apt-get. Por favor, instala git, make y g++ manualmente en tu sistema."
+            exit 1
+        fi
+    fi
+
+    # 2. Clonar y compilar llama.cpp
+    mkdir -p bin
+    echo "Clonando repositorio de llama.cpp (shallow clone)..."
+    git clone --depth 1 https://github.com/ggerganov/llama.cpp bin/llama.cpp-src
+    if [ $? -ne 0 ]; then
+        echo "ERROR: No se pudo clonar llama.cpp."
+        exit 1
+    fi
+
+    echo "Compilando llama.cpp (esto puede tomar unos minutos)..."
+    cd bin/llama.cpp-src || exit 1
+    make -j"$THREADS"
+    if [ -f "./llama-server" ]; then
+        cp llama-server ../llama-server
+        cd ../..
+        echo "Limpiando archivos temporales de compilación..."
+        rm -rf bin/llama.cpp-src
+        LLAMA_BIN="./bin/llama-server"
+        echo "¡Compilación completada con éxito! Binario guardado en ./bin/llama-server"
+    else
+        echo "ERROR: Falló la compilación de llama-server."
+        cd ../..
+        exit 1
+    fi
 fi
 
 MODEL_PATH="./models/$MODEL_NAME"
